@@ -26,6 +26,10 @@ An enterprise-grade, multi-agent AI system orchestrating **LangGraph**, **Hybrid
 
 ## 🌐 System Architecture & End-to-End Pipeline
 
+<div align="center">
+  <img src="assets/multiagent_pipeline_sketch.jpg" alt="Multi-Agent Architectural Workflow" width="480" />
+</div>
+
 ```text
                                  ┌───────────────────────┐
                                  │      USER / CLIENT    │
