@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Agent Chat</title>
+  <meta name="description" content="Clean and intelligent multi-agent AI workspace." />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Markdown & Syntax -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+
+  <!-- Clean Stylesheet -->
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <div id="app-container" class="app-layout">
+    
+    <!-- MOBILE BACKDROP -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+
+    <!-- MINIMAL SIDEBAR (Collapsed by default until opened) -->
+    <aside id="sidebar" class="sidebar collapsed">
+      <div class="sidebar-top">
+        <div class="brand">
+          <div class="brand-badge"><i data-lucide="sparkles"></i></div>
+          <span class="brand-name">Intelligence</span>
+        </div>
+        <button id="sidebar-collapse-btn" class="icon-btn" title="Close sidebar">
+          <i data-lucide="panel-left-close"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-action">
+        <button id="new-chat-btn" class="btn-new-chat">
+          <i data-lucide="plus"></i>
+          <span>New chat</span>
+        </button>
+      </div>
+
+      <div class="sidebar-content">
+        <div class="history-label">Recent Chats</div>
+        <div id="conversation-list" class="conversation-list"></div>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="system-status" id="llm-status-indicator" title="Ollama engine status">
+          <span class="status-dot online"></span>
+          <span class="status-text" id="status-model-label">llama3.2</span>
+        </div>
+        <button id="open-settings-btn" class="icon-btn" title="Settings">
+          <i data-lucide="settings"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT AREA -->
+    <main id="main-content" class="main-content">
+      
+      <!-- Clean Minimal Header -->
+      <header class="chat-header">
+        <div class="header-left">
+          <button id="sidebar-open-btn" class="icon-btn sidebar-toggle-trigger" title="Toggle sidebar">
+            <i data-lucide="panel-left"></i>
+          </button>
+          <span id="current-chat-title" class="current-chat-title">New chat</span>
+        </div>
+
+        <div class="header-right">
+          <button id="header-memory-btn" class="header-btn" title="View & manage long-term memories">
+            <span>Memory</span>
+            <span id="header-memory-count" class="badge-count-pill">0</span>
+          </button>
+          <button id="header-files-btn" class="header-btn" title="Manage uploaded documents">
+            <span>Files</span>
+            <span id="header-file-count" class="badge-count-pill">0</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages Stream Area -->
+      <section id="chat-messages-container" class="chat-messages-container">
+        
+        <!-- Clean Minimal Welcome Screen -->
+        <div id="welcome-hero" class="welcome-clean">
+          <h1 class="welcome-heading">Where would you like to start?</h1>
+        </div>
+
+        <!-- Rendered Messages List -->
+        <div id="messages-list" class="messages-list"></div>
+
+        <!-- Minimal Thinking State Indicator -->
+        <div id="agent-thinking-card" class="thinking-clean hidden">
+          <div class="thinking-pulse"></div>
+          <span id="thinking-step-detail">Thinking...</span>
+        </div>
+
+      </section>
+
+      <!-- Clean Minimal Input Bar with Plus Upload Button -->
+      <footer class="chat-input-area">
+        <div class="input-card">
+          <!-- Hidden file input triggered by plus button -->
+          <input type="file" id="direct-file-input" class="file-input-hidden" accept=".pdf,.docx,.txt,.md,.csv,.json" />
+          
+          <div class="input-main-row">
+            <button id="input-plus-upload-btn" class="btn-input-plus" title="Upload PDF, DOCX, TXT (Max 500MB)">
+              <i data-lucide="plus"></i>
+            </button>
+            <textarea
+              id="chat-input"
+              class="chat-textarea"
+              placeholder="Ask anything, search web, analyze data, write code..."
+              rows="1"
+            ></textarea>
+            <button id="send-message-btn" class="btn-send" title="Send (Enter)">
+              <i data-lucide="arrow-up"></i>
+            </button>
+          </div>
+          
+          <div id="upload-status-bar" class="upload-status-bar hidden">
+            <i data-lucide="loader-2" class="spin-icon"></i>
+            <span id="upload-status-text">Indexing document...</span>
+          </div>
+        </div>
+      </footer>
+
+    </main>
+
+    <!-- FILES MANAGER MODAL (View, Upload, Delete) -->
+    <div id="files-modal" class="modal-overlay hidden">
+      <div class="modal-card modal-files-card">
+        <div class="modal-header">
+          <div class="modal-title-with-badge">
+            <h3>Knowledge Base Files</h3>
+            <span id="modal-file-count-badge" class="badge-tag">0 / 30 files</span>
+          </div>
+          <button id="close-files-modal-btn" class="icon-btn"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Quick Dropzone inside modal -->
+          <div id="modal-dropzone" class="upload-dropzone-compact">
+            <input type="file" id="modal-file-input" class="file-input-hidden" accept=".pdf,.docx,.txt,.md,.csv,.json" />
+            <div class="dropzone-compact-inner">
+              <i data-lucide="upload-cloud"></i>
+              <span>Drop file here or <b class="browse-link">browse</b> <small style="display:block; opacity:0.65; margin-top:2px;">PDF, DOCX, TXT, CSV (Max 30 files • Up to 500 MB)</small></span>
+            </div>
+          </div>
+
+          <!-- Uploaded Documents List -->
+          <div class="files-list-section">
+            <div class="files-list-header">Uploaded Documents</div>
+            <div id="uploaded-files-list" class="uploaded-files-list">
+              <!-- Dynamically populated files -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="close-files-btn" class="btn-clean-ghost">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LONG-TERM MEMORY MODAL (View, Add, Delete, Clear) -->
+    <div id="memory-modal" class="modal-overlay hidden">
+      <div class="modal-card modal-memory-card">
+        <div class="modal-header">
+          <div class="modal-title-with-badge">
+            <h3>Long-Term Memory</h3>
+            <span id="modal-memory-count-badge" class="badge-tag">0 memories</span>
+          </div>
+          <button id="close-memory-modal-btn" class="icon-btn"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-intro-text">
+            The assistant retains facts, preferences, and instructions across all sessions.
+          </p>
+
+          <!-- Add Memory Form -->
+          <div class="memory-add-box">
+            <div class="memory-add-input-row">
+              <input
+                type="text"
+                id="new-memory-input"
+                class="clean-text-input"
+                placeholder="e.g., User prefers Python 3.10 and concise answers with code snippets"
+              />
+              <select id="new-memory-category" class="clean-select-compact">
+                <option value="preference">Preference</option>
+                <option value="user_profile">Profile</option>
+                <option value="fact">Fact</option>
+                <option value="project">Project</option>
+                <option value="instruction">Instruction</option>
+                <option value="general">General</option>
+              </select>
+              <button id="add-memory-btn" class="btn-clean-primary btn-add-mem">
+                <span>Add</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stored Memories List -->
+          <div class="memories-list-section">
+            <div class="memories-list-header">
+              <span>Remembered Context & Facts</span>
+              <button id="clear-all-memories-btn" class="btn-text-danger" title="Clear all memories">Clear All</button>
+            </div>
+            <div id="memories-items-list" class="memories-items-list">
+              <!-- Dynamically populated memories -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="close-memory-btn" class="btn-clean-ghost">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MINIMAL SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Settings</h3>
+          <button id="close-settings-modal-btn" class="icon-btn"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="setting-row">
+            <label for="cfg-model-select">Model</label>
+            <select id="cfg-model-select" class="clean-select">
+              <option value="llama3.2:latest">llama3.2:latest (Ollama)</option>
+              <option value="llama3.1:8b">llama3.1:8b</option>
+              <option value="mistral:latest">mistral:latest</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label-group">
+              <label for="cfg-temperature">Creativity (Temperature)</label>
+              <span id="cfg-temperature-val" class="setting-val">0.2</span>
+            </div>
+            <input type="range" id="cfg-temperature" min="0.0" max="1.0" step="0.05" value="0.2" class="clean-slider" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label-group">
+              <label for="cfg-confidence">RAG Confidence Threshold</label>
+              <span id="cfg-confidence-val" class="setting-val">0.65</span>
+            </div>
+            <input type="range" id="cfg-confidence" min="0.1" max="0.95" step="0.05" value="0.65" class="clean-slider" />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="save-settings-btn" class="btn-clean-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

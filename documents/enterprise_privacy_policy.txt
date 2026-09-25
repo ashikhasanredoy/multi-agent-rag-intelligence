@@ -1,0 +1,34 @@
+Enterprise Office Privacy & Data Protection Policy
+Document Control ID: POL-SEC-2026-V3 | Effective Date: January 1, 2026
+
+1. Purpose and Scope
+This Enterprise Office Privacy and Data Protection Policy sets forth the mandatory principles governing the collection, processing, storage, and transfer of employee, contractor, and visitor personal data within all corporate premises, remote working environments, and digital infrastructure.
+This policy applies to all full-time, part-time employees, contractors, consultants, and third-party vendors who access corporate information assets or occupy company facilities worldwide.
+
+2. Data Collection and Lawful Basis
+The Company collects and processes personal information strictly necessary for legitimate employment administration, regulatory compliance, operational safety, and contractual fulfillment.
+Categories of collected data include:
+• Identification & Contact: Full name, national ID, passport, home address, phone, emergency contacts.
+• Financial & Payroll: Bank account coordinates, tax identification numbers, wage history, and benefits.
+• Health & Safety: Workplace accident reports, disability accommodations, and mandatory occupational health clearances.
+• Biometric & Access Logs: Physical badge swipes, building turnstile access timestamps, and facility CCTV footage.
+
+3. Network, Email, and Device Monitoring
+All computational resources, laptops, mobile devices, communication channels (Slack, Email, Zoom), and network bandwidth provided by the Company are enterprise business tools.
+Employees should have no expectation of personal privacy regarding communications conducted over company-owned devices or networks. The Company reserves the right to audit, inspect, and monitor electronic communications to prevent data leaks, intellectual property theft, and security breaches in compliance with applicable local labor regulations.
+Automated Data Loss Prevention (DLP) agents continuously scan outgoing attachments for sensitive customer credentials, proprietary codebases, and unencrypted confidential records.
+
+4. Bring Your Own Device (BYOD) & Remote Work
+Employees accessing corporate resources from personal devices must install company-approved Mobile Device Management (MDM) software. The MDM enforces containerized encryption, remote-wipe capabilities for enterprise sandboxes, and biometric lock screens. Personal photo libraries, private messaging applications, and personal browsing history remain strictly inaccessible to corporate administrators.
+
+5. Information Classification & Handling
+Corporate data is classified into four distinct tiers:
+• Tier 1 (Public): Marketing brochures, public press releases, open-source repositories.
+• Tier 2 (Internal): Internal wikis, organizational charts, all-hands meeting recordings.
+• Tier 3 (Confidential): Customer PII, architectural roadmaps, financial quarterly draft statements.
+• Tier 4 (Restricted): Encryption keys, source code repositories, M&A negotiation transcripts, and unreleased AI model weights.
+Restricted assets must never be transferred to personal storage, unauthorized cloud drives, or unapproved third-party LLMs.
+
+6. Security Incident Response & Whistleblower Protections
+Any suspected unauthorized disclosure, lost laptop, phishing engagement, or data leak must be reported to security-incident@company.com within two (2) hours of discovery.
+The Company maintains a strict non-retaliation policy for all good-faith disclosures under whistleblower protection mandates. Violations of this privacy policy may result in disciplinary action up to and including termination of employment and legal prosecution.

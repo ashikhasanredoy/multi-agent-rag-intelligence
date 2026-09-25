@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments & Virtual Envs
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Temporary data & caches
+data/temp_uploads/
+.pytest_cache/
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
