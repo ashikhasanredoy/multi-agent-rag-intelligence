@@ -19,3 +19,4 @@ data/temp_uploads/
 .DS_Store
 .AppleDouble
 .LSOverride
+tests/
