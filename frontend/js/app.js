@@ -524,6 +524,13 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('clean_rag_settings', JSON.stringify(state.settings));
       closeModal(elements.settingsModal);
     });
+
+    // Dismiss chat options menu on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.conversation-actions')) {
+        document.querySelectorAll('.chat-options-menu').forEach(m => m.classList.add('hidden'));
+      }
+    });
   }
 
   function bindSlider(slider, display) {
@@ -611,15 +618,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function deleteConversation(id) {
+    const idx = state.conversations.findIndex(c => c.id === id);
+    if (idx === -1) return;
+
+    state.conversations.splice(idx, 1);
+    localStorage.setItem('clean_rag_conversations', JSON.stringify(state.conversations));
+
+    if (state.currentConversationId === id) {
+      if (state.conversations.length > 0) {
+        const nextId = state.conversations[Math.min(idx, state.conversations.length - 1)].id;
+        selectConversation(nextId);
+      } else {
+        createNewConversation();
+      }
+    } else {
+      renderConversationsList();
+    }
+  }
+
   function renderConversationsList() {
     elements.conversationList.innerHTML = '';
     state.conversations.forEach(conv => {
       const item = document.createElement('div');
       item.className = `conversation-item ${conv.id === state.currentConversationId ? 'active' : ''}`;
-      item.textContent = conv.title;
-      item.addEventListener('click', () => selectConversation(conv.id));
+      item.setAttribute('data-id', conv.id);
+      item.innerHTML = `
+        <span class="conversation-title" title="${escapeHtml(conv.title)}">${escapeHtml(conv.title)}</span>
+        <div class="conversation-actions">
+          <button class="btn-chat-options" title="More options" type="button">
+            <i data-lucide="more-horizontal"></i>
+          </button>
+          <div class="chat-options-menu hidden">
+            <button class="btn-chat-delete" title="Delete chat" type="button">
+              <i data-lucide="trash-2"></i>
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.conversation-actions')) return;
+        selectConversation(conv.id);
+      });
+
+      const optionsBtn = item.querySelector('.btn-chat-options');
+      const menu = item.querySelector('.chat-options-menu');
+      const delBtn = item.querySelector('.btn-chat-delete');
+
+      optionsBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.chat-options-menu').forEach(m => {
+          if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+      });
+
+      delBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteConversation(conv.id);
+      });
+
       elements.conversationList.appendChild(item);
     });
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   // --- MESSAGES RENDERING ---
