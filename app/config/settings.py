@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "llama3.2:latest"
     EMBEDDING_MODEL: str = "nomic-embed-text:latest"
     LLM_TEMPERATURE: float = 0.2
-    LLM_TIMEOUT_SECONDS: float = 60.0
+    LLM_TIMEOUT_SECONDS: float = 240.0
 
     # Qdrant / Vector DB
     QDRANT_URL: str = "http://localhost:6333"

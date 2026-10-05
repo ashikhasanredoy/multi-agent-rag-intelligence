@@ -72,8 +72,11 @@ class LLMService:
             }
         }
 
+        timeout_sec = get_settings().LLM_TIMEOUT_SECONDS
+        timeout_config = httpx.Timeout(timeout_sec, connect=15.0, read=timeout_sec, write=15.0)
+
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
                 response = await client.post(url, json=payload)
                 response.raise_for_status()
                 data = response.json()
@@ -82,8 +85,9 @@ class LLMService:
             logger.error(f"Ollama HTTP error {e.response.status_code}: {e.response.text}")
             raise RuntimeError(f"Ollama API returned status {e.response.status_code}: {e.response.text}") from e
         except Exception as e:
-            logger.error(f"Error during Ollama chat request: {str(e)}")
-            raise RuntimeError(f"Failed to communicate with LLM service: {str(e)}") from e
+            err_detail = f"{type(e).__name__}: {str(e)}" if str(e) else type(e).__name__
+            logger.error(f"Error during Ollama chat request: {err_detail}")
+            raise RuntimeError(f"Failed to communicate with LLM service: {err_detail}") from e
 
     async def stream_chat(
         self,
