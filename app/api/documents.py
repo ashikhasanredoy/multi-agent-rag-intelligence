@@ -1,6 +1,6 @@
-import shutil
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from app.rag.ingestion import ingestion_service
 from app.utils.logging import logger
 
@@ -72,3 +72,13 @@ async def delete_document(filename: str):
     except Exception as e:
         logger.error(f"Error deleting document {filename}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/file/{filename}")
+async def get_document_file(filename: str):
+    """Serve a document file so the user can inspect and verify it directly."""
+    doc_path = Path("./documents") / filename
+    if not doc_path.exists():
+        raise HTTPException(status_code=404, detail="Document file not found.")
+    media_type = "application/pdf" if filename.lower().endswith(".pdf") else "text/plain"
+    return FileResponse(path=str(doc_path), filename=filename, media_type=media_type)

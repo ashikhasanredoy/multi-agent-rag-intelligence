@@ -24,6 +24,7 @@ class WebAgent:
             sources.append(SourceCitation(
                 document=r.get("title", "Web Evidence"),
                 snippet=r.get("snippet", ""),
+                url=r.get("url"),
                 score=0.95
             ))
             context_snippets.append(f"Title: {r.get('title')}\nSource: {r.get('source')}\nSnippet: {r.get('snippet')}\n")

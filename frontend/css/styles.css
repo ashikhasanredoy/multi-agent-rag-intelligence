@@ -395,9 +395,11 @@ code, pre {
   color: var(--text-primary);
 }
 
-.icon-btn i {
+.icon-btn i,
+.icon-btn svg {
   width: 16px;
   height: 16px;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -528,17 +530,37 @@ code, pre {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 4px 8px;
+  padding: 5px 9px;
   font-size: 11px;
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
 }
 
 .citation-card:hover {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.45);
+  background: rgba(88, 166, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.citation-card:active {
+  transform: translateY(0);
+}
+
+.citation-card .ext-link-icon {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.citation-card:hover .ext-link-icon {
+  opacity: 1;
+  transform: translate(1px, -1px);
+  color: #58a6ff;
 }
 
 .message-footer-actions {

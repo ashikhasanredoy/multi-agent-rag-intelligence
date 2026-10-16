@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebar: document.getElementById('sidebar'),
     sidebarCollapseBtn: document.getElementById('sidebar-collapse-btn'),
     sidebarOpenBtn: document.getElementById('sidebar-open-btn'),
+    headerNewChatBtn: document.getElementById('header-new-chat-btn'),
     sidebarBackdrop: document.getElementById('sidebar-backdrop'),
     newChatBtn: document.getElementById('new-chat-btn'),
     conversationList: document.getElementById('conversation-list'),
@@ -436,12 +437,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // New Chat
-    elements.newChatBtn?.addEventListener('click', () => {
+    // Expose startNewChat globally for reliable inline and programmatic triggering
+    window.startNewChat = function() {
       createNewConversation();
+      elements.chatInput?.focus();
       if (window.innerWidth <= 768) {
         closeSidebar();
       }
+    };
+
+    // New Chat (Sidebar & Header)
+    elements.newChatBtn?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      window.startNewChat();
+    });
+
+    elements.headerNewChatBtn?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      window.startNewChat();
     });
 
     // Plus Upload Button on Input Box
@@ -700,18 +713,42 @@ document.addEventListener('DOMContentLoaded', () => {
       formattedContent = `<p>${escapeHtml(msg.content)}</p>`;
     }
 
+    function resolveSourceUrl(s) {
+      if (s.url && typeof s.url === 'string' && s.url.trim()) {
+        return s.url.trim();
+      }
+      const doc = (s.document || '').trim();
+      // Match stock tickers like (AAPL), (MSFT), (GOOGL)
+      const tickerMatch = doc.match(/\(([A-Z0-9\.\^]+)\)/i);
+      if (tickerMatch && tickerMatch[1]) {
+        return `https://finance.yahoo.com/quote/${encodeURIComponent(tickerMatch[1].toUpperCase())}`;
+      }
+      if (doc.startsWith('http://') || doc.startsWith('https://')) {
+        return doc;
+      }
+      if (doc.endsWith('.pdf') || doc.endsWith('.txt') || doc.endsWith('.md')) {
+        return `/documents/file/${encodeURIComponent(doc)}`;
+      }
+      return `https://www.google.com/search?q=${encodeURIComponent(doc)}`;
+    }
+
     let sourcesHtml = '';
     if (msg.sources && msg.sources.length > 0) {
       sourcesHtml = `
         <div class="sources-container">
-          <div class="sources-header">Sources</div>
+          <div class="sources-header">Sources & Evidence (Click to verify)</div>
           <div class="citation-chips">
-            ${msg.sources.map(s => `
-              <div class="citation-card">
-                <i data-lucide="link" style="width: 11px; height: 11px;"></i>
-                <span>${escapeHtml(s.document)}${s.page ? ' (p. ' + s.page + ')' : ''}</span>
-              </div>
-            `).join('')}
+            ${msg.sources.map(s => {
+              const url = resolveSourceUrl(s);
+              const label = escapeHtml(s.document) + (s.page ? ' (p. ' + s.page + ')' : '');
+              return `
+                <a href="${url}" target="_blank" rel="noopener noreferrer" class="citation-card clickable-source" title="Open source to verify: ${url}">
+                  <i data-lucide="link" style="width: 11px; height: 11px;"></i>
+                  <span>${label}</span>
+                  <i data-lucide="external-link" class="ext-link-icon" style="width: 10px; height: 10px; margin-left: 2px;"></i>
+                </a>
+              `;
+            }).join('')}
           </div>
         </div>
       `;

@@ -17,11 +17,13 @@ class RAGAgent:
         context_blocks = []
 
         for doc in retrieved_docs:
+            fname = doc.get("filename", "Knowledge Base Document")
             sources.append(SourceCitation(
-                document=doc.get("filename", "Knowledge Base Document"),
+                document=fname,
                 page=doc.get("page", 1),
                 chunk_id=doc.get("chunk_id"),
                 snippet=doc.get("content", "")[:200] + "...",
+                url=f"/documents/file/{fname}" if fname else None,
                 score=doc.get("score", 0.95)
             ))
             context_blocks.append(

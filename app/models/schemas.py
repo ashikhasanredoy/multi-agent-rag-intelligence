@@ -33,6 +33,7 @@ class SourceCitation(BaseModel):
     chunk_id: Optional[str] = Field(default=None, description="Unique chunk reference.")
     score: Optional[float] = Field(default=None, description="Relevance / confidence score of the chunk.")
     snippet: Optional[str] = Field(default=None, description="Brief snippet excerpt.")
+    url: Optional[str] = Field(default=None, description="Direct URL to external website or document link.")
 
 
 class SupervisorDecision(BaseModel):

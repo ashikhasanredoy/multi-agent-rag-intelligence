@@ -24,7 +24,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
 
   <!-- Clean Stylesheet -->
-  <link rel="stylesheet" href="/static/css/styles.css?v=1.2" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=2.1" />
 </head>
 <body>
   <div id="app-container" class="app-layout">
@@ -38,9 +38,6 @@
         <div class="brand">
           <span class="brand-name">Intelligence</span>
         </div>
-        <button id="sidebar-collapse-btn" class="icon-btn" title="Close sidebar">
-          <i data-lucide="panel-left-close"></i>
-        </button>
       </div>
 
       <div class="sidebar-action">
@@ -74,6 +71,9 @@
         <div class="header-left">
           <button id="sidebar-open-btn" class="icon-btn sidebar-toggle-trigger" title="Toggle sidebar">
             <i data-lucide="panel-left"></i>
+          </button>
+          <button id="header-new-chat-btn" class="icon-btn" title="New conversation" type="button" onclick="if(window.startNewChat){window.startNewChat()}else{document.getElementById('new-chat-btn')?.click()}">
+            <i data-lucide="plus"></i>
           </button>
           <span id="current-chat-title" class="current-chat-title">New chat</span>
         </div>
@@ -275,6 +275,6 @@
 
   </div>
 
-  <script src="/static/js/app.js?v=1.2"></script>
+  <script src="/static/js/app.js?v=2.1"></script>
 </body>
 </html>
