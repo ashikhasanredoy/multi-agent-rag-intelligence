@@ -39,7 +39,8 @@ class RAGAgent:
             "1. State the exact policy deadlines, section rules, and details specified in the evidence.\n"
             "2. Cite the document name and section/page if available.\n"
             "3. If the evidence contains the answer, do NOT say 'I don't have information about your policy'. Answer directly and authoritatively.\n"
-            "4. Keep the answer structured and clear with bullet points."
+            "4. Keep the answer structured and clear with bullet points and headings.\n"
+            "5. NEVER include code snippets or programming examples unless the source document itself contains code. This is a document Q&A agent, not a code assistant."
         )
 
         user_content = f"User Question:\n{query}\n\nRetrieved Policy Documents Context:\n{context_text}\n\nPlease generate a grounded, accurate response."
