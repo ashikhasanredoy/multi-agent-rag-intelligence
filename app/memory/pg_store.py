@@ -337,7 +337,7 @@ class PostgresLongTermMemoryStore:
 
     async def delete_memory(self, memory_id: str) -> bool:
         """Delete a memory by ID."""
-        self._fallback_store.delete_memory(memory_id)
+        await self._fallback_store.delete_memory(memory_id)
         if not await self._is_pg_healthy():
             return True
 
@@ -357,7 +357,7 @@ class PostgresLongTermMemoryStore:
 
     async def clear_memories(self) -> int:
         """Clear all stored memories."""
-        count = self._fallback_store.clear_memories()
+        count = await self._fallback_store.clear_memories()
         if not await self._is_pg_healthy():
             return count
 
