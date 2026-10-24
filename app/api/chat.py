@@ -27,7 +27,8 @@ async def chat_endpoint(request: ChatRequest):
                 
                 response = await workflow_engine.run(
                     conversation_id=conv_id,
-                    query=request.message
+                    query=request.message,
+                    history=request.history
                 )
 
                 # 2. Emit active agent and sources metadata
@@ -60,7 +61,8 @@ async def chat_endpoint(request: ChatRequest):
         # Non-streaming fallback
         response = await workflow_engine.run(
             conversation_id=conv_id,
-            query=request.message
+            query=request.message,
+            history=request.history
         )
         return response
     except Exception as e:

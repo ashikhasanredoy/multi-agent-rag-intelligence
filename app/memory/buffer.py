@@ -1,8 +1,5 @@
-"""
-Short-Term Conversation Memory using LangGraph MemorySaver.
-Replaces the in-memory WorkingMemoryBuffer with a proper
-LangGraph checkpoint that supports thread-scoped state.
-"""
+import json
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -21,34 +18,69 @@ def get_memory_saver() -> MemorySaver:
 
 class WorkingMemoryBuffer:
     """
-    Thin adapter that wraps LangGraph MemorySaver for backwards-compatibility
-    with existing workflow code that calls add_turn / format_history_for_prompt.
+    Adapter that manages thread-scoped conversation working memory with
+    LangGraph MemorySaver checkpointing AND persistent disk storage.
 
-    Under the hood it stores turns as a simple list in a MemorySaver checkpoint
-    keyed by conversation_id, so LangGraph graphs compiled with this saver
-    can resume any thread automatically.
+    Stores conversation turns in ./data/chat_history.json so that when the
+    app or server is closed and reopened, past conversation history and dialogue
+    context are preserved seamlessly.
     """
 
-    def __init__(self):
+    def __init__(self, storage_path: str = "./data/chat_history.json"):
         self._saver = _memory_saver
+        self.storage_path = Path(storage_path)
         self._fallback: Dict[str, List[Dict[str, Any]]] = {}
+        self._load_from_disk()
+
+    def _load_from_disk(self):
+        try:
+            if self.storage_path.exists():
+                with open(self.storage_path, "r", encoding="utf-8") as f:
+                    self._fallback = json.load(f)
+                logger.info(f"Loaded dialogue history for {len(self._fallback)} conversations from {self.storage_path}")
+        except Exception as e:
+            logger.warning(f"Could not load conversation history from disk: {e}")
+            self._fallback = {}
+
+    def _save_to_disk(self):
+        try:
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.storage_path, "w", encoding="utf-8") as f:
+                json.dump(self._fallback, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"Could not persist conversation history to disk: {e}")
 
     # ------------------------------------------------------------------ #
     #  Core turn management
     # ------------------------------------------------------------------ #
 
     def add_turn(self, conversation_id: str, role: str, content: str):
-        """Append a turn to the conversation history stored in MemorySaver."""
+        """Append a turn to the conversation history and persist to disk."""
         if not conversation_id or not content:
             return
         turn = {"role": role, "content": content}
-        # Use the fallback dict — MemorySaver state is read/written by
-        # LangGraph graph invocations via thread_id config.
         history = self._fallback.setdefault(conversation_id, [])
         history.append(turn)
-        # Keep a sliding window of 20 messages (10 turns)
-        if len(history) > 20:
-            self._fallback[conversation_id] = history[-20:]
+        # Keep a sliding window of 30 messages (15 turns)
+        if len(history) > 30:
+            self._fallback[conversation_id] = history[-30:]
+        self._save_to_disk()
+
+    def sync_history(self, conversation_id: str, turns: List[Dict[str, Any]]):
+        """Restore or backfill conversation history turns from client or previous session."""
+        if not conversation_id or not turns:
+            return
+        cleaned_turns = [
+            {"role": t.get("role", "user"), "content": t.get("content", "")}
+            for t in turns
+            if t.get("content")
+        ]
+        if not cleaned_turns:
+            return
+        existing = self._fallback.get(conversation_id, [])
+        if len(cleaned_turns) >= len(existing):
+            self._fallback[conversation_id] = cleaned_turns[-30:]
+            self._save_to_disk()
 
     def get_history(
         self, conversation_id: str, limit_turns: Optional[int] = None
@@ -59,15 +91,15 @@ class WorkingMemoryBuffer:
         return history
 
     def format_history_for_prompt(
-        self, conversation_id: str, max_turns: int = 4
+        self, conversation_id: str, max_turns: int = 5
     ) -> str:
         turns = self.get_history(conversation_id, limit_turns=max_turns)
         if not turns:
             return ""
         lines = []
         for t in turns:
-            speaker = "User" if t["role"] == "user" else "Assistant"
-            lines.append(f"{speaker}: {t['content']}")
+            speaker = "User" if t.get("role") == "user" else "Assistant"
+            lines.append(f"{speaker}: {t.get('content', '')}")
         return "\n".join(lines)
 
     def clear(self, conversation_id: Optional[str] = None):
@@ -75,7 +107,9 @@ class WorkingMemoryBuffer:
             self._fallback.pop(conversation_id, None)
         else:
             self._fallback.clear()
+        self._save_to_disk()
 
 
 # Singleton
 working_memory = WorkingMemoryBuffer()
+

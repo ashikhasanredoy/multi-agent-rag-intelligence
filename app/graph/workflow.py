@@ -24,9 +24,18 @@ class MultiAgentWorkflow:
     Controls memory recall, routing, agent execution, validation, synthesis, and memory consolidation.
     """
 
-    async def run(self, conversation_id: str, query: str) -> ChatResponse:
+    async def run(
+        self,
+        conversation_id: str,
+        query: str,
+        history: Optional[List[Dict[str, Any]]] = None
+    ) -> ChatResponse:
         start_time = time.perf_counter()
         logger.info(f"Starting Multi-Agent Workflow for query: '{query}' (Conv: {conversation_id})")
+
+        # Restore / sync any previous conversation history turns into working memory
+        if history:
+            working_memory.sync_history(conversation_id, history)
 
         # 1. Concurrently run Memory Recall and Supervisor Routing in parallel
         memory_task = asyncio.create_task(

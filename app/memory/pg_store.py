@@ -17,6 +17,7 @@ from datetime import datetime
 from sqlalchemy import text
 
 from app.memory.models import MemoryItem, MemoryCategory, MemoryRecallResult
+from app.memory.store import LongTermMemoryStore
 from app.database.postgres import get_db_session
 from app.services.embeddings import embedding_service
 from app.utils.logging import logger
@@ -35,11 +36,32 @@ def cosine_similarity(v1: List[float], v2: List[float]) -> float:
 
 class PostgresLongTermMemoryStore:
     """
-    PostgreSQL-backed Long-Term Memory Store using async SQLAlchemy.
+    PostgreSQL-backed Long-Term Memory Store with automatic persistent JSON fallback.
+    If PostgreSQL is unavailable or unauthenticated, it seamlessly persists and recalls
+    all memories using the disk-based store (./data/long_term_memory.json), guaranteeing
+    that memories are NEVER lost when closing or restarting the app.
     """
 
     def __init__(self):
         self._lock = asyncio.Lock()
+        self._fallback_store = LongTermMemoryStore()
+        self._pg_healthy: Optional[bool] = None
+
+    async def _is_pg_healthy(self) -> bool:
+        if self._pg_healthy is False:
+            return False
+        try:
+            async with get_db_session() as db:
+                await db.execute(text("SELECT 1"))
+            self._pg_healthy = True
+            return True
+        except Exception as e:
+            if self._pg_healthy is not False:
+                logger.warning(
+                    f"PostgreSQL unavailable ({e}). Gracefully falling back to persistent disk store (./data/long_term_memory.json)."
+                )
+            self._pg_healthy = False
+            return False
 
     # ------------------------------------------------------------------ #
     #  Internal DB helpers
@@ -81,59 +103,84 @@ class PostgresLongTermMemoryStore:
         if not clean_content:
             raise ValueError("Memory content cannot be empty.")
 
-        # Check for near-duplicate
-        existing = await self._find_duplicate(clean_content, category)
-        if existing:
+        # If PostgreSQL is not available, delegate directly to persistent disk store
+        if not await self._is_pg_healthy():
+            return await self._fallback_store.add_memory(
+                content=clean_content,
+                category=category,
+                importance=importance,
+                metadata=metadata,
+                embed=embed,
+            )
+
+        try:
+            # Check for near-duplicate in PG
+            existing = await self._find_duplicate(clean_content, category)
+            if existing:
+                async with self._lock:
+                    await self._touch_memory(existing.id, metadata)
+                return existing
+
+            # Generate embedding
+            embedding = None
+            if embed:
+                try:
+                    embedding = await embedding_service.get_embedding(clean_content)
+                except Exception as e:
+                    logger.warning(f"Could not embed memory: {e}")
+
+            item = MemoryItem(
+                content=clean_content,
+                category=category,
+                importance=max(1, min(5, importance)),
+                embedding=embedding,
+                metadata=metadata or {},
+            )
+
+            embedding_json = json.dumps(embedding) if embedding else None
+            meta_json = json.dumps(item.metadata) if item.metadata else "{}"
+
             async with self._lock:
-                await self._touch_memory(existing.id, metadata)
-            return existing
+                async with get_db_session() as db:
+                    await db.execute(
+                        text("""
+                            INSERT INTO long_term_memories
+                                (id, content, category, importance, embedding,
+                                 created_at, last_accessed_at, access_count, metadata)
+                            VALUES
+                                (:id, :content, :category, :importance, :embedding,
+                                 :created_at, :last_accessed_at, :access_count, :metadata::jsonb)
+                            ON CONFLICT (id) DO NOTHING
+                        """),
+                        {
+                            "id": item.id,
+                            "content": item.content,
+                            "category": item.category.value,
+                            "importance": item.importance,
+                            "embedding": embedding_json,
+                            "created_at": item.created_at,
+                            "last_accessed_at": item.last_accessed_at,
+                            "access_count": item.access_count,
+                            "metadata": meta_json,
+                        },
+                    )
 
-        # Generate embedding
-        embedding = None
-        if embed:
-            try:
-                embedding = await embedding_service.get_embedding(clean_content)
-            except Exception as e:
-                logger.warning(f"Could not embed memory: {e}")
+            # Keep persistent disk file mirrored
+            self._fallback_store.memories[item.id] = item
+            self._fallback_store._save_to_disk()
 
-        item = MemoryItem(
-            content=clean_content,
-            category=category,
-            importance=max(1, min(5, importance)),
-            embedding=embedding,
-            metadata=metadata or {},
-        )
-
-        embedding_json = json.dumps(embedding) if embedding else None
-        meta_json = json.dumps(item.metadata) if item.metadata else "{}"
-
-        async with self._lock:
-            async with get_db_session() as db:
-                await db.execute(
-                    text("""
-                        INSERT INTO long_term_memories
-                            (id, content, category, importance, embedding,
-                             created_at, last_accessed_at, access_count, metadata)
-                        VALUES
-                            (:id, :content, :category, :importance, :embedding,
-                             :created_at, :last_accessed_at, :access_count, :metadata::jsonb)
-                        ON CONFLICT (id) DO NOTHING
-                    """),
-                    {
-                        "id": item.id,
-                        "content": item.content,
-                        "category": item.category.value,
-                        "importance": item.importance,
-                        "embedding": embedding_json,
-                        "created_at": item.created_at,
-                        "last_accessed_at": item.last_accessed_at,
-                        "access_count": item.access_count,
-                        "metadata": meta_json,
-                    },
-                )
-
-        logger.info(f"Added memory [{item.id}] ({category.value}): '{clean_content[:50]}'")
-        return item
+            logger.info(f"Added memory [{item.id}] ({category.value}): '{clean_content[:50]}'")
+            return item
+        except Exception as e:
+            logger.warning(f"Error saving memory to PostgreSQL: {e}. Falling back to disk store.")
+            self._pg_healthy = False
+            return await self._fallback_store.add_memory(
+                content=clean_content,
+                category=category,
+                importance=importance,
+                metadata=metadata,
+                embed=embed,
+            )
 
     async def _find_duplicate(
         self, content: str, category: MemoryCategory
@@ -187,6 +234,12 @@ class PostgresLongTermMemoryStore:
         """Recall memories using hybrid semantic + keyword scoring."""
         if not query.strip():
             return []
+
+        # If PostgreSQL is not available, recall directly from persistent disk store
+        if not await self._is_pg_healthy():
+            return await self._fallback_store.recall_memories(
+                query=query, top_k=top_k, category=category, min_score=min_score
+            )
 
         # Fetch all memories from DB (or filtered by category)
         items = await self.list_memories(category=category)
@@ -254,6 +307,9 @@ class PostgresLongTermMemoryStore:
         self, category: Optional[MemoryCategory] = None
     ) -> List[MemoryItem]:
         """List all memories sorted by created_at descending."""
+        if not await self._is_pg_healthy():
+            return self._fallback_store.list_memories(category=category)
+
         try:
             async with get_db_session() as db:
                 if category:
@@ -270,13 +326,21 @@ class PostgresLongTermMemoryStore:
                         text("SELECT * FROM long_term_memories ORDER BY created_at DESC")
                     )
                 rows = result.fetchall()
-                return [self._row_to_item(r) for r in rows]
+                items = [self._row_to_item(r) for r in rows]
+                if not items and self._fallback_store.memories:
+                    return self._fallback_store.list_memories(category=category)
+                return items
         except Exception as e:
-            logger.error(f"Failed to list memories: {e}")
-            return []
+            logger.warning(f"Failed to list memories from PostgreSQL ({e}). Using persistent disk store.")
+            self._pg_healthy = False
+            return self._fallback_store.list_memories(category=category)
 
     async def delete_memory(self, memory_id: str) -> bool:
         """Delete a memory by ID."""
+        self._fallback_store.delete_memory(memory_id)
+        if not await self._is_pg_healthy():
+            return True
+
         try:
             async with get_db_session() as db:
                 result = await db.execute(
@@ -288,33 +352,32 @@ class PostgresLongTermMemoryStore:
                     logger.info(f"Deleted memory: {memory_id}")
                 return deleted
         except Exception as e:
-            logger.error(f"Failed to delete memory {memory_id}: {e}")
-            return False
+            logger.warning(f"Failed to delete memory {memory_id} in PostgreSQL: {e}")
+            return True
 
     async def clear_memories(self) -> int:
         """Clear all stored memories."""
+        count = self._fallback_store.clear_memories()
+        if not await self._is_pg_healthy():
+            return count
+
         try:
             async with get_db_session() as db:
                 result = await db.execute(
                     text("DELETE FROM long_term_memories")
                 )
-                count = result.rowcount
-                logger.info(f"Cleared all {count} memories from PostgreSQL.")
-                return count
+                logger.info(f"Cleared all {result.rowcount} memories from PostgreSQL.")
+                return result.rowcount
         except Exception as e:
-            logger.error(f"Failed to clear memories: {e}")
-            return 0
+            logger.warning(f"Failed to clear memories in PostgreSQL: {e}")
+            return count
 
     # Backward-compat sync wrapper used by memory API router
     def list_memories_sync_unsafe(self) -> List[MemoryItem]:
-        """WARNING: Only call from sync context if event loop already running."""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.list_memories())
-        except Exception:
-            return []
+        """Synchronously list memories using persistent disk store."""
+        return self._fallback_store.list_memories()
 
 
 # Singleton
 memory_store = PostgresLongTermMemoryStore()
+

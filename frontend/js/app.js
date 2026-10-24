@@ -143,10 +143,14 @@ document.addEventListener('DOMContentLoaded', () => {
       syncHeaderNewChatBtn();
     }
 
-    if (state.conversations.length === 0) {
-      createNewConversation();
-    } else {
+    const savedActiveId = localStorage.getItem('clean_rag_active_conv_id');
+    const existing = state.conversations.find(c => c.id === savedActiveId);
+    if (existing) {
+      selectConversation(existing.id);
+    } else if (state.conversations.length > 0) {
       selectConversation(state.conversations[0].id);
+    } else {
+      createNewConversation();
     }
   }
 
@@ -609,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function selectConversation(id) {
     state.currentConversationId = id;
+    localStorage.setItem('clean_rag_active_conv_id', id);
     const conv = getCurrentConversation();
     if (conv) {
       elements.currentChatTitle.textContent = conv.title;
@@ -855,13 +860,20 @@ document.addEventListener('DOMContentLoaded', () => {
     conv.messages.push(assistantMessage);
 
     try {
+      // Provide prior conversation history turns so backend memory is never lost across app restarts
+      const priorTurns = conv.messages
+        .slice(0, -2) // exclude current userMessage and assistant placeholder
+        .slice(-10)   // sliding window of recent turns
+        .map(m => ({ role: m.role, content: m.content }));
+
       const res = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversation_id: conv.id,
           message: text,
-          stream: true
+          stream: true,
+          history: priorTurns
         })
       });
 

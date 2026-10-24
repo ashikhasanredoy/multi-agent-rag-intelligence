@@ -25,6 +25,10 @@ class ChatRequest(BaseModel):
     )
     message: str = Field(..., min_length=1, description="The user's query or prompt message.")
     stream: bool = Field(default=False, description="Whether to stream the assistant's response.")
+    history: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Optional prior conversation history turns to guarantee memory continuity across app restarts."
+    )
 
 
 AgentType = Literal[
