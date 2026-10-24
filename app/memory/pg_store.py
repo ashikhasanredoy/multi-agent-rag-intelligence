@@ -337,9 +337,9 @@ class PostgresLongTermMemoryStore:
 
     async def delete_memory(self, memory_id: str) -> bool:
         """Delete a memory by ID."""
-        await self._fallback_store.delete_memory(memory_id)
+        fallback_deleted = await self._fallback_store.delete_memory(memory_id)
         if not await self._is_pg_healthy():
-            return True
+            return fallback_deleted
 
         try:
             async with get_db_session() as db:
@@ -350,10 +350,10 @@ class PostgresLongTermMemoryStore:
                 deleted = result.rowcount > 0
                 if deleted:
                     logger.info(f"Deleted memory: {memory_id}")
-                return deleted
+                return deleted or fallback_deleted
         except Exception as e:
             logger.warning(f"Failed to delete memory {memory_id} in PostgreSQL: {e}")
-            return True
+            return fallback_deleted
 
     async def clear_memories(self) -> int:
         """Clear all stored memories."""
