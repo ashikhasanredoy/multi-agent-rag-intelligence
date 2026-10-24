@@ -7,7 +7,7 @@ from app.memory.models import (
     MemoryRecallResult,
     MemoryCategory
 )
-from app.memory.store import memory_store
+from app.memory.pg_store import memory_store
 from app.utils.logging import logger
 
 router = APIRouter(prefix="/memory", tags=["Memory"])
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/memory", tags=["Memory"])
 async def list_memories(category: Optional[MemoryCategory] = None):
     """List all stored long-term memories with optional category filtering."""
     try:
-        memories = memory_store.list_memories(category=category)
+        memories = await memory_store.list_memories(category=category)
         return {
             "memories": [m.model_dump() for m in memories],
             "total_count": len(memories),

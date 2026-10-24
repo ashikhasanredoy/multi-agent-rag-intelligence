@@ -104,6 +104,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Sync Header New Chat (+) Button: hide when sidebar is open, show when sidebar is hidden
+  function syncHeaderNewChatBtn() {
+    if (!elements.headerNewChatBtn) return;
+    const isMobile = window.innerWidth <= 768;
+    const isSidebarOpen = isMobile
+      ? Boolean(elements.sidebar?.classList.contains('mobile-open'))
+      : Boolean(elements.sidebar && !elements.sidebar.classList.contains('collapsed'));
+
+    if (isSidebarOpen) {
+      elements.headerNewChatBtn.classList.add('sidebar-open-hidden');
+    } else {
+      elements.headerNewChatBtn.classList.remove('sidebar-open-hidden');
+    }
+  }
+
   // --- INITIALIZATION ---
   initApp();
 
@@ -125,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.sidebar.classList.remove('mobile-open');
         elements.sidebarBackdrop?.classList.add('hidden');
       }
+      syncHeaderNewChatBtn();
     }
 
     if (state.conversations.length === 0) {
@@ -415,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isCollapsed = elements.sidebar.classList.toggle('collapsed');
         localStorage.setItem('sidebar_open', !isCollapsed ? 'true' : 'false');
       }
+      syncHeaderNewChatBtn();
     }
 
     function closeSidebar() {
@@ -423,12 +440,14 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.sidebar.classList.remove('mobile-open');
         elements.sidebarBackdrop?.classList.add('hidden');
         localStorage.setItem('sidebar_open', 'false');
+        syncHeaderNewChatBtn();
       }
     }
 
     elements.sidebarCollapseBtn?.addEventListener('click', closeSidebar);
     elements.sidebarOpenBtn?.addEventListener('click', toggleSidebar);
     elements.sidebarBackdrop?.addEventListener('click', closeSidebar);
+    window.addEventListener('resize', syncHeaderNewChatBtn);
 
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
@@ -598,6 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.innerWidth <= 768) {
         elements.sidebar.classList.remove('mobile-open');
         elements.sidebarBackdrop?.classList.add('hidden');
+        syncHeaderNewChatBtn();
       }
     }
   }
@@ -791,7 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.messagesContainer.scrollTop = elements.messagesContainer.scrollHeight;
   }
 
-  // --- SEND MESSAGE ---
+  // --- SEND MESSAGE WITH LIVE TOKEN STREAMING ---
   async function sendMessage() {
     const text = elements.chatInput.value.trim();
     if (!text || state.isGenerating) return;
@@ -823,6 +843,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const startTime = performance.now();
 
+    // Prepare placeholder assistant message in state for live streaming tokens
+    const assistantMessage = {
+      role: 'assistant',
+      content: '',
+      agent: 'general_agent',
+      sources: [],
+      latency: null,
+      timestamp: new Date().toISOString()
+    };
+    conv.messages.push(assistantMessage);
+
     try {
       const res = await fetch('/chat', {
         method: 'POST',
@@ -830,34 +861,68 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({
           conversation_id: conv.id,
           message: text,
-          stream: false
+          stream: true
         })
       });
 
       if (!res.ok) throw new Error('API error');
-      const data = await res.json();
-      const latency = ((performance.now() - startTime) / 1000).toFixed(2);
 
-      conv.messages.push({
-        role: 'assistant',
-        content: data.answer || '',
-        agent: data.agent || 'general_agent',
-        sources: data.sources || [],
-        latency: data.latency_seconds || latency,
-        timestamp: new Date().toISOString()
-      });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Keep unfinished line in buffer
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const jsonStr = trimmed.slice(6);
+            try {
+              const event = JSON.parse(jsonStr);
+              if (event.type === 'status') {
+                if (elements.agentThinkingCard) {
+                  const label = elements.agentThinkingCard.querySelector('.agent-name-tag');
+                  if (label) label.textContent = event.content;
+                }
+              } else if (event.type === 'metadata') {
+                assistantMessage.agent = event.agent || 'general_agent';
+                assistantMessage.sources = event.sources || [];
+                assistantMessage.latency = event.latency;
+                elements.agentThinkingCard.classList.add('hidden');
+              } else if (event.type === 'token') {
+                elements.agentThinkingCard.classList.add('hidden');
+                assistantMessage.content += event.content;
+                renderMessages();
+                scrollToBottom();
+              } else if (event.type === 'error') {
+                assistantMessage.content += `\n[Error: ${event.content}]`;
+                renderMessages();
+              }
+            } catch (e) {
+              // ignore parse errors on partial chunks
+            }
+          }
+        }
+      }
+
+      if (!assistantMessage.latency) {
+        assistantMessage.latency = ((performance.now() - startTime) / 1000).toFixed(2);
+      }
     } catch (err) {
-      conv.messages.push({
-        role: 'assistant',
-        content: `Error: ${err.message}`,
-        timestamp: new Date().toISOString()
-      });
+      assistantMessage.content = `Error: ${err.message}`;
     } finally {
       elements.agentThinkingCard.classList.add('hidden');
       state.isGenerating = false;
       elements.sendBtn.disabled = elements.chatInput.value.trim().length === 0;
       saveConversations();
       renderMessages();
+      scrollToBottom();
     }
   }
 

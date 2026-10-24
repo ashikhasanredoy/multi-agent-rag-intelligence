@@ -14,6 +14,7 @@ from app.api.chat import router as chat_router
 from app.api.documents import router as documents_router
 from app.api.memory import router as memory_router
 from app.services.llm import llm_service
+from app.database.postgres import init_db, close_db
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +27,12 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
     logger.info(f"Configured LLM Model: {settings.LLM_MODEL} at {settings.OLLAMA_BASE_URL}")
 
+    # Initialize PostgreSQL tables for Long-Term Memory
+    try:
+        await init_db()
+    except Exception as e:
+        logger.warning(f"PostgreSQL init failed (memory will be unavailable): {e}")
+
     # Check Ollama status on startup
     status = await llm_service.check_health()
     if status.get("model_ready"):
@@ -34,6 +41,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Ollama check: {status.get('status')} - Default model '{settings.LLM_MODEL}' status: {status}")
 
     yield
+    await close_db()
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
 
 

@@ -24,7 +24,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
 
   <!-- Clean Stylesheet -->
-  <link rel="stylesheet" href="/static/css/styles.css?v=2.1" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=2.2" />
 </head>
 <body>
   <div id="app-container" class="app-layout">
@@ -79,10 +79,6 @@
         </div>
 
         <div class="header-right">
-          <button id="header-memory-btn" class="header-btn" title="View & manage long-term memories">
-            <span>Memory</span>
-            <span id="header-memory-count" class="badge-count-pill">0</span>
-          </button>
           <button id="header-files-btn" class="header-btn" title="Manage uploaded documents">
             <span>Files</span>
             <span id="header-file-count" class="badge-count-pill">0</span>
@@ -151,14 +147,6 @@
         </div>
 
         <div class="modal-body">
-          <!-- Quick Dropzone inside modal -->
-          <div id="modal-dropzone" class="upload-dropzone-compact">
-            <input type="file" id="modal-file-input" class="file-input-hidden" accept=".pdf,.docx,.txt,.md,.csv,.json" />
-            <div class="dropzone-compact-inner">
-              <i data-lucide="upload-cloud"></i>
-              <span>Drop file here or <b class="browse-link">browse</b> <small style="display:block; opacity:0.65; margin-top:2px;">PDF, DOCX, TXT, CSV (Max 30 files • Up to 500 MB)</small></span>
-            </div>
-          </div>
 
           <!-- Uploaded Documents List -->
           <div class="files-list-section">
@@ -171,63 +159,6 @@
 
         <div class="modal-footer">
           <button id="close-files-btn" class="btn-clean-ghost">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- LONG-TERM MEMORY MODAL (View, Add, Delete, Clear) -->
-    <div id="memory-modal" class="modal-overlay hidden">
-      <div class="modal-card modal-memory-card">
-        <div class="modal-header">
-          <div class="modal-title-with-badge">
-            <h3>Long-Term Memory</h3>
-            <span id="modal-memory-count-badge" class="badge-tag">0 memories</span>
-          </div>
-          <button id="close-memory-modal-btn" class="icon-btn"><i data-lucide="x"></i></button>
-        </div>
-
-        <div class="modal-body">
-          <p class="modal-intro-text">
-            The assistant retains facts, preferences, and instructions across all sessions.
-          </p>
-
-          <!-- Add Memory Form -->
-          <div class="memory-add-box">
-            <div class="memory-add-input-row">
-              <input
-                type="text"
-                id="new-memory-input"
-                class="clean-text-input"
-                placeholder="e.g., User prefers Python 3.10 and concise answers with code snippets"
-              />
-              <select id="new-memory-category" class="clean-select-compact">
-                <option value="preference">Preference</option>
-                <option value="user_profile">Profile</option>
-                <option value="fact">Fact</option>
-                <option value="project">Project</option>
-                <option value="instruction">Instruction</option>
-                <option value="general">General</option>
-              </select>
-              <button id="add-memory-btn" class="btn-clean-primary btn-add-mem">
-                <span>Add</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Stored Memories List -->
-          <div class="memories-list-section">
-            <div class="memories-list-header">
-              <span>Remembered Context & Facts</span>
-              <button id="clear-all-memories-btn" class="btn-text-danger" title="Clear all memories">Clear All</button>
-            </div>
-            <div id="memories-items-list" class="memories-items-list">
-              <!-- Dynamically populated memories -->
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button id="close-memory-btn" class="btn-clean-ghost">Close</button>
         </div>
       </div>
     </div>
@@ -275,6 +206,6 @@
 
   </div>
 
-  <script src="/static/js/app.js?v=2.1"></script>
+  <script src="/static/js/app.js?v=2.2"></script>
 </body>
 </html>

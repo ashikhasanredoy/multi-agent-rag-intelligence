@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -27,22 +27,43 @@ class ChatRequest(BaseModel):
     stream: bool = Field(default=False, description="Whether to stream the assistant's response.")
 
 
+AgentType = Literal[
+    "document_rag",
+    "finance_market",
+    "product_search",
+    "web_search",
+    "general_chat",
+    "code_execution"
+]
+
+
 class SourceCitation(BaseModel):
-    document: str = Field(..., description="Filename or title of the source document.")
+    document: str = Field(..., description="Filename, company ticker, or page title.")
+    source_type: Optional[str] = Field(default="document", description="document | web | finance | product")
     page: Optional[int] = Field(default=None, description="Page number of the reference if applicable.")
     chunk_id: Optional[str] = Field(default=None, description="Unique chunk reference.")
-    score: Optional[float] = Field(default=None, description="Relevance / confidence score of the chunk.")
+    score: Optional[float] = Field(default=None, description="Relevance / confidence score.")
     snippet: Optional[str] = Field(default=None, description="Brief snippet excerpt.")
     url: Optional[str] = Field(default=None, description="Direct URL to external website or document link.")
+    retrieved_at: Optional[str] = Field(default=None, description="ISO timestamp of when evidence was fetched.")
 
 
-class SupervisorDecision(BaseModel):
-    intent: str = Field(..., description="Determined intent (e.g., general, rag, web, code, multi_agent).")
-    agents: List[str] = Field(default_factory=list, description="List of agents chosen to process the query.")
+class RoutingDecision(BaseModel):
+    intent: str = Field(..., description="Classified intent (DOCUMENT_RAG, FINANCE_MARKET, PRODUCT_SEARCH, WEB_SEARCH, GENERAL_CHAT, MULTI_AGENT).")
+    agents: List[str] = Field(default_factory=list, description="Agents selected for this query.")
+    requires_live_data: bool = False
+    requires_documents: bool = False
+    requires_finance: bool = False
+    requires_product: bool = False
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    reasoning_summary: str = Field(default="")
+
+
+class SupervisorDecision(RoutingDecision):
+    """Backwards compatibility alias for SupervisorDecision."""
     requires_rag: bool = False
     requires_web: bool = False
     requires_code: bool = False
-    confidence: float = 1.0
 
 
 class ChatResponse(BaseModel):

@@ -1,6 +1,6 @@
 from app.memory.models import MemoryItem, MemoryCategory, MemoryAddRequest, MemoryRecallRequest
-from app.memory.store import memory_store, LongTermMemoryStore
-from app.memory.buffer import working_memory, WorkingMemoryBuffer
+from app.memory.pg_store import memory_store, PostgresLongTermMemoryStore
+from app.memory.buffer import working_memory, WorkingMemoryBuffer, get_memory_saver
 from app.memory.extractor import memory_extractor, MemoryExtractor
 
 __all__ = [
@@ -9,9 +9,10 @@ __all__ = [
     "MemoryAddRequest",
     "MemoryRecallRequest",
     "memory_store",
-    "LongTermMemoryStore",
+    "PostgresLongTermMemoryStore",
     "working_memory",
     "WorkingMemoryBuffer",
+    "get_memory_saver",
     "memory_extractor",
     "MemoryExtractor",
 ]

@@ -402,6 +402,29 @@ code, pre {
   pointer-events: none;
 }
 
+/* Header New Chat Button (Plus) - automatically hidden when sidebar is open */
+#header-new-chat-btn {
+  display: inline-flex;
+}
+
+#header-new-chat-btn.sidebar-open-hidden {
+  display: none !important;
+}
+
+/* On Desktop: when sidebar is open (not collapsed), automatically remove header plus button */
+@media (min-width: 769px) {
+  .sidebar:not(.collapsed) ~ .main-content #header-new-chat-btn {
+    display: none !important;
+  }
+}
+
+/* On Mobile: when sidebar is open (mobile-open), automatically remove header plus button */
+@media (max-width: 768px) {
+  .sidebar.mobile-open ~ .main-content #header-new-chat-btn {
+    display: none !important;
+  }
+}
+
 /* ==========================================================================
    MESSAGES CONTAINER
    ========================================================================== */

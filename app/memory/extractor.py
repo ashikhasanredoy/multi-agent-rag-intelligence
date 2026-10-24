@@ -2,7 +2,7 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from app.memory.models import MemoryCategory
-from app.memory.store import memory_store
+from app.memory.pg_store import memory_store
 from app.services.llm import llm_service
 from app.utils.logging import logger
 

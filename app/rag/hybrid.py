@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import numpy as np
 from pathlib import Path
@@ -95,13 +96,24 @@ class HybridSearchEngine:
     def get_document_chunk_count(self, filename: str) -> int:
         return sum(1 for c in self.chunks if c.get("filename") == filename)
 
-    async def search(self, query: str, top_k: int = 5, rrf_k: int = 60) -> List[Dict[str, Any]]:
-        """Run Hybrid Vector Search + BM25 + Reciprocal Rank Fusion."""
+    async def search(
+        self,
+        query: str,
+        top_k: int = 5,
+        rrf_k: int = 60,
+        min_cosine_threshold: float = 0.45
+    ) -> List[Dict[str, Any]]:
+        """
+        Run Hybrid Vector Search + BM25 + Reciprocal Rank Fusion.
+        Applies a strict cosine similarity relevance filter so irrelevant queries
+        do not match unrelated documents.
+        """
         if not self.chunks:
             return []
 
         # 1. Vector Search
         vector_scores = []
+        max_cosine = 0.0
         try:
             q_emb = await embedding_service.get_embedding(query)
             q_vec = np.array(q_emb, dtype=np.float32)
@@ -111,37 +123,66 @@ class HybridSearchEngine:
 
             for idx, doc_vec in enumerate(self.vectors):
                 sim = float(np.dot(q_vec, doc_vec))
+                if sim > max_cosine:
+                    max_cosine = sim
                 vector_scores.append((idx, sim))
         except Exception as e:
             logger.warning(f"Query embedding failed: {e}")
             for idx in range(len(self.chunks)):
-                vector_scores.append((idx, 0.5))
+                vector_scores.append((idx, 0.0))
 
         vector_ranked = sorted(vector_scores, key=lambda x: x[1], reverse=True)
 
-        # 2. BM25 Search
-        tokenized_q = query.lower().split()
+        # 2. BM25 Search with Stopword Filtering
+        STOP_WORDS = {
+            "a", "an", "the", "and", "or", "of", "in", "for", "on", "with",
+            "at", "by", "to", "is", "are", "was", "were", "what", "which",
+            "how", "who", "whom", "this", "that", "it", "from", "as", "be"
+        }
+        raw_tokens = re.sub(r'[^a-zA-Z0-9\s]', ' ', query.lower()).split()
+        tokenized_q = [w for w in raw_tokens if w not in STOP_WORDS and len(w) > 2]
         bm25_ranked = []
-        if self.bm25_index:
+        max_bm25 = 0.0
+        if self.bm25_index and tokenized_q:
             scores = self.bm25_index.get_scores(tokenized_q)
+            max_bm25 = max(scores) if len(scores) > 0 else 0.0
             bm25_ranked = sorted([(idx, score) for idx, score in enumerate(scores)], key=lambda x: x[1], reverse=True)
         else:
-            bm25_ranked = vector_ranked
+            bm25_ranked = []
+
+        # If cosine similarity is low and no meaningful BM25 keyword matches, reject
+        if max_cosine < min_cosine_threshold and max_bm25 <= 0.0:
+            logger.info(
+                f"Hybrid search rejected candidates: max_cosine={max_cosine:.3f} < {min_cosine_threshold}, "
+                f"max_bm25={max_bm25:.2f}. No relevant documents found."
+            )
+            return []
 
         # 3. Reciprocal Rank Fusion (RRF)
         rrf_scores = {}
-        for rank, (idx, _) in enumerate(vector_ranked):
-            rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (rrf_k + rank + 1))
+        for rank, (idx, sim) in enumerate(vector_ranked):
+            # Only fuse if vector similarity meets strict threshold
+            if sim >= min_cosine_threshold:
+                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (rrf_k + rank + 1))
 
-        for rank, (idx, _) in enumerate(bm25_ranked):
-            rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (rrf_k + rank + 1))
+        for rank, (idx, score) in enumerate(bm25_ranked):
+            if score > 0.0:
+                rrf_scores[idx] = rrf_scores.get(idx, 0.0) + (1.0 / (rrf_k + rank + 1))
+
+        if not rrf_scores:
+            return []
 
         sorted_indices = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
 
         results = []
+        # Map index to vector similarity for quick lookup
+        vec_sim_map = dict(vector_scores)
+
         for idx, score in sorted_indices:
             chunk = dict(self.chunks[idx])
-            chunk["score"] = round(float(score * 50), 3)
+            chunk["rrf_score"] = round(float(score * 50), 3)
+            chunk["cosine_similarity"] = round(float(vec_sim_map.get(idx, 0.0)), 4)
+            chunk["score"] = chunk["cosine_similarity"]
             results.append(chunk)
 
         return results

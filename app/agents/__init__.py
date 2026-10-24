@@ -1,5 +1,7 @@
 from app.agents.supervisor import supervisor_agent, SupervisorAgent
 from app.agents.web_agent import web_agent, WebAgent
+from app.agents.finance_agent import finance_agent, FinanceAgent
+from app.agents.product_agent import product_agent, ProductAgent
 from app.agents.rag_agent import rag_agent, RAGAgent
 from app.agents.code_agent import code_agent, CodeAgent
 from app.agents.general_agent import general_agent, GeneralAgent
@@ -11,6 +13,10 @@ __all__ = [
     "SupervisorAgent",
     "web_agent",
     "WebAgent",
+    "finance_agent",
+    "FinanceAgent",
+    "product_agent",
+    "ProductAgent",
     "rag_agent",
     "RAGAgent",
     "code_agent",

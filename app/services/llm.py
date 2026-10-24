@@ -68,7 +68,10 @@ class LLMService:
             "messages": payload_messages,
             "stream": False,
             "options": {
-                "temperature": temp
+                "temperature": temp,
+                "num_predict": 768,       # Bounded output generation to prevent runaway output latency
+                "num_ctx": 4096,          # Fast, bounded context window
+                "top_p": 0.9
             }
         }
 

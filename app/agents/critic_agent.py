@@ -14,6 +14,19 @@ class CriticAgent:
         # Check if model inappropriately gave a knowledge cutoff disclaimer despite tools
         cutoff_markers = ["knowledge cutoff", "as of december 2023", "as of my last update", "i do not have real-time"]
         has_cutoff_disclaimer = any(marker in draft_answer.lower() for marker in cutoff_markers)
+
+        # Cross-Domain Confusion Check: Did product query return stock market quotes?
+        is_product_query = any(w in query.lower() for w in ["iphone", "smartphone", "laptop", "galaxy", "macbook", "ipad", "retail price", "msrp"])
+        has_stock_confusion = is_product_query and any(w in draft_answer.lower() for w in ["nasdaq", "nyse", "market cap", "share price", "stock of apple", "aapl stock"])
+
+        if has_stock_confusion:
+            logger.warning("Critic detected stock confusion on a consumer product query.")
+            return {
+                "valid": False,
+                "action": "reject_stock_confusion",
+                "feedback": "Do not cite stock market prices for consumer electronics. State retail pricing or unannounced product status.",
+                "confidence": 0.90
+            }
         
         if has_cutoff_disclaimer and sources:
             # Critic flags cutoff disclaimer when real-time sources exist

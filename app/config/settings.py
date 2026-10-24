@@ -21,8 +21,9 @@ class Settings(BaseSettings):
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_COLLECTION: str = "documents_collection"
 
-    # Database
+    # Database (SQLite for legacy / PostgreSQL for production)
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/app.db"
+    POSTGRES_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/multiagent_db"
 
     # Security
     JWT_SECRET: str = "supersecretjwtkey_change_in_production_32chars"
