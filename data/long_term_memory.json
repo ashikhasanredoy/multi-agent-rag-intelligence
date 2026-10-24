@@ -775,8 +775,8 @@
       -1.3185938596725464
     ],
     "created_at": "2026-09-25T17:30:39.149289",
-    "last_accessed_at": "2026-10-24T17:24:24.973165",
-    "access_count": 29,
+    "last_accessed_at": "2026-10-24T17:29:30.227551",
+    "access_count": 31,
     "metadata": {
       "source": "manual_api"
     }
@@ -1557,11 +1557,22 @@
       -0.5115155577659607
     ],
     "created_at": "2026-10-24T17:26:26.225018",
-    "last_accessed_at": "2026-10-24T17:26:26.225047",
-    "access_count": 0,
+    "last_accessed_at": "2026-10-24T17:29:30.227541",
+    "access_count": 2,
     "metadata": {
       "source": "heuristic",
       "conversation_id": "test_persistent_conv"
     }
+  },
+  {
+    "id": "mem_b7902b9c",
+    "content": "User prefers Rust for performance critical code.",
+    "category": "preference",
+    "importance": 5,
+    "embedding": null,
+    "created_at": "2026-10-24T17:29:20.520447",
+    "last_accessed_at": "2026-10-24T17:29:30.227554",
+    "access_count": 3,
+    "metadata": {}
   }
 ]
