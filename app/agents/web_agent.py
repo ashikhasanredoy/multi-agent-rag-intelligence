@@ -40,7 +40,8 @@ class WebAgent:
             "2. State the exact prices, facts, or numbers retrieved from the live data.\n"
             "3. DO NOT claim that your knowledge cutoff prevents you from answering, because live data is supplied.\n"
             "4. Format the output cleanly with bullet points, currencies, and timestamps.\n"
-            "5. NEVER include code snippets, programming examples, or technical implementations. Respond with factual prose and structured bullet points only."
+            "5. NEVER include raw URLs, fabricated web links, or metadata lines like 'Source: ...' inside the answer body. Citations are handled by the system's interactive source cards.\n"
+            "6. NEVER include code snippets, programming examples, or technical implementations. Respond with factual prose and structured bullet points only."
         )
 
         user_content = f"User Question:\n{query}\n\nReal-Time Retrieved Evidence:\n{evidence_text}\n\nPlease generate a direct, accurate answer."

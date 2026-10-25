@@ -10,9 +10,12 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
 
-    # Ollama / LLM
+    # Ollama / OpenRouter / LLM
+    LLM_PROVIDER: str = "openrouter"  # "openrouter" or "ollama"
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    LLM_MODEL: str = "llama3.2:latest"
+    LLM_MODEL: str = "nvidia/nemotron-3.5-lightning:free"
     EMBEDDING_MODEL: str = "nomic-embed-text:latest"
     LLM_TEMPERATURE: float = 0.2
     LLM_TIMEOUT_SECONDS: float = 240.0

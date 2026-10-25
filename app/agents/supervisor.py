@@ -50,7 +50,7 @@ class SupervisorAgent:
         "what does the document", "summarize the uploaded", "explain my uploaded",
         "hypotheses in the", "experimental results does the", "annual leave policy",
         "privacy policy", "all_sql_queries", "adaptive image enhancement", "gap analysis",
-        "literature review in the paper", "uploaded file", "uploaded files", "my project files"
+        "literature review in the paper", "uploaded file", "uploaded files", "my project files", "proposal"
     ]
 
     WEB_KEYWORDS = [
@@ -133,7 +133,17 @@ class SupervisorAgent:
                 reasoning_summary="Query requests code synthesis, algorithm implementation, or debugging."
             )
 
-        # 2. PRODUCT_SEARCH (Check before finance so 'Apple iPhone price' doesn't get routed to stock market)
+        # 2. DOCUMENT_RAG (Check before product so policy questions about equipment like lost laptops don't route to product search)
+        if has_rag:
+            return RoutingDecision(
+                intent="DOCUMENT_RAG",
+                agents=["rag_agent"],
+                requires_documents=True,
+                confidence=0.98,
+                reasoning_summary="Query explicitly refers to knowledge base, uploaded PDFs, policies, or research files."
+            )
+
+        # 3. PRODUCT_SEARCH (Check before finance so 'Apple iPhone price' doesn't get routed to stock market)
         if has_product:
             return RoutingDecision(
                 intent="PRODUCT_SEARCH",
@@ -155,15 +165,6 @@ class SupervisorAgent:
                 reasoning_summary="Query asks for equity shares, stock market quotes, or ticker data."
             )
 
-        # 4. DOCUMENT_RAG
-        if has_rag:
-            return RoutingDecision(
-                intent="DOCUMENT_RAG",
-                agents=["rag_agent"],
-                requires_documents=True,
-                confidence=0.98,
-                reasoning_summary="Query explicitly refers to knowledge base, uploaded PDFs, policies, or research files."
-            )
 
         # 5. CODE_EXECUTION
         if any(w in lower_q for w in self.CODE_KEYWORDS):
@@ -185,17 +186,24 @@ class SupervisorAgent:
             )
 
         # 7. Check if query is naturally answered by knowledge base documents (if indexed and matching)
-        if len(hybrid_search.chunks) > 0:
-            # Test if query has high semantic affinity to indexed documents
-            # Only route if not general chat greeting
-            if len(lower_q.split()) > 3 and not any(g in lower_q for g in ["hello", "hi", "hey", "who are you", "what is rag", "explain what"]):
-                return RoutingDecision(
-                    intent="DOCUMENT_RAG",
-                    agents=["rag_agent"],
-                    requires_documents=True,
-                    confidence=0.80,
-                    reasoning_summary="Query evaluated against active indexed knowledge base."
-                )
+        if len(hybrid_search.chunks) > 0 and hybrid_search.bm25_index:
+            # Test if query has direct keyword/lexical match in indexed documents
+            tokens = [w for w in lower_q.split() if w not in {"a", "an", "the", "and", "or", "of", "in", "for", "on", "with", "at", "by", "to", "is", "are", "was", "were", "what", "which", "how", "who", "whom", "this", "that", "it", "from", "as", "be", "tell", "share", "info", "information", "about", "explain"}]
+            if tokens:
+                try:
+                    bm25_scores = hybrid_search.bm25_index.get_scores(tokens)
+                    max_bm = max(bm25_scores) if len(bm25_scores) > 0 else 0.0
+                    # Strict threshold: must have strong lexical affinity (> 2.0) to avoid false RAG hits
+                    if max_bm > 2.0 and len(lower_q.split()) > 3 and not any(g in lower_q for g in ["hello", "hi", "hey", "who are you", "what is rag", "explain what"]):
+                        return RoutingDecision(
+                            intent="DOCUMENT_RAG",
+                            agents=["rag_agent"],
+                            requires_documents=True,
+                            confidence=0.85,
+                            reasoning_summary="Query matches lexical keywords in active indexed knowledge base."
+                        )
+                except Exception:
+                    pass
 
         # 8. GENERAL_CHAT
         return RoutingDecision(

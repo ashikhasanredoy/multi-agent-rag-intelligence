@@ -531,11 +531,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat input auto-expand
-    elements.chatInput?.addEventListener('input', () => {
+    const updateSendBtnState = () => {
       autoResizeTextarea(elements.chatInput);
-      const len = elements.chatInput.value.length;
-      elements.sendBtn.disabled = len === 0 || state.isGenerating;
-    });
+      const hasText = elements.chatInput && elements.chatInput.value.trim().length > 0;
+      if (elements.sendBtn) {
+        elements.sendBtn.disabled = !hasText || state.isGenerating;
+      }
+    };
+    elements.chatInput?.addEventListener('input', updateSendBtnState);
+    elements.chatInput?.addEventListener('keyup', updateSendBtnState);
+    elements.chatInput?.addEventListener('change', updateSendBtnState);
 
     elements.chatInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -544,7 +549,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    elements.sendBtn?.addEventListener('click', () => sendMessage());
+    elements.sendBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      sendMessage();
+    });
 
     // Settings Modal
     elements.openSettingsBtn?.addEventListener('click', () => openModal(elements.settingsModal));
@@ -740,43 +748,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resolveSourceUrl(s) {
       if (s.url && typeof s.url === 'string' && s.url.trim()) {
-        return s.url.trim();
+        const trimmed = s.url.trim();
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/documents/file/')) {
+          return trimmed;
+        }
       }
       const doc = (s.document || '').trim();
-      // Match stock tickers like (AAPL), (MSFT), (GOOGL)
-      const tickerMatch = doc.match(/\(([A-Z0-9\.\^]+)\)/i);
-      if (tickerMatch && tickerMatch[1]) {
-        return `https://finance.yahoo.com/quote/${encodeURIComponent(tickerMatch[1].toUpperCase())}`;
-      }
       if (doc.startsWith('http://') || doc.startsWith('https://')) {
         return doc;
       }
       if (doc.endsWith('.pdf') || doc.endsWith('.txt') || doc.endsWith('.md')) {
         return `/documents/file/${encodeURIComponent(doc)}`;
       }
-      return `https://www.google.com/search?q=${encodeURIComponent(doc)}`;
+      // Match stock tickers like (AAPL), (MSFT), (GOOGL)
+      const tickerMatch = doc.match(/\(([A-Z0-9\.\^]+)\)/i);
+      if (tickerMatch && tickerMatch[1]) {
+        return `https://finance.yahoo.com/quote/${encodeURIComponent(tickerMatch[1].toUpperCase())}`;
+      }
+      return '';
     }
 
     let sourcesHtml = '';
     if (msg.sources && msg.sources.length > 0) {
-      sourcesHtml = `
-        <div class="sources-container">
-          <div class="sources-header">Sources & Evidence (Click to verify)</div>
-          <div class="citation-chips">
-            ${msg.sources.map(s => {
-              const url = resolveSourceUrl(s);
-              const label = escapeHtml(s.document) + (s.page ? ' (p. ' + s.page + ')' : '');
-              return `
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="citation-card clickable-source" title="Open source to verify: ${url}">
-                  <i data-lucide="link" style="width: 11px; height: 11px;"></i>
-                  <span>${label}</span>
-                  <i data-lucide="external-link" class="ext-link-icon" style="width: 10px; height: 10px; margin-left: 2px;"></i>
-                </a>
-              `;
-            }).join('')}
+      // Deduplicate sources by URL and title
+      const uniqueSources = [];
+      const seenSourceKeys = new Set();
+      for (const s of msg.sources) {
+        const u = resolveSourceUrl(s);
+        const key = (u || s.document || '').toLowerCase();
+        if (!seenSourceKeys.has(key)) {
+          seenSourceKeys.add(key);
+          uniqueSources.push({ ...s, resolvedUrl: u });
+        }
+      }
+
+      const verifiedSources = uniqueSources.filter(s => s.resolvedUrl && s.resolvedUrl.trim().length > 0);
+
+      if (verifiedSources.length > 0) {
+        sourcesHtml = `
+          <div class="sources-container">
+            <div class="sources-header">Original Sources & Verification (Click to verify)</div>
+            <div class="citation-chips">
+              ${verifiedSources.map(s => {
+                const url = s.resolvedUrl;
+                const label = escapeHtml(s.document) + (s.page ? ' (p. ' + s.page + ')' : '');
+                return `
+                  <a href="${url}" target="_blank" rel="noopener noreferrer" class="citation-card clickable-source" title="Open original source: ${url}">
+                    <i data-lucide="link" style="width: 11px; height: 11px;"></i>
+                    <span>${label}</span>
+                    <i data-lucide="external-link" class="ext-link-icon" style="width: 10px; height: 10px; margin-left: 2px;"></i>
+                  </a>
+                `;
+              }).join('')}
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      }
     }
 
     const copyAction = !isUser ? `

@@ -144,7 +144,8 @@ def test_integration_chat_streaming_sse():
 
 def test_integration_chat_history_restoration_across_restarts():
     """Verify dialogue turns sent in ChatRequest restore working memory seamlessly."""
-    conv_id = "conv_restart_continuity_test"
+    import uuid
+    conv_id = f"conv_restart_{uuid.uuid4().hex[:8]}"
     
     # Simulate a prior session with 2 turns sent from client
     payload = {

@@ -775,8 +775,8 @@
       -1.3185938596725464
     ],
     "created_at": "2026-09-25T17:30:39.149289",
-    "last_accessed_at": "2026-10-24T17:29:30.227551",
-    "access_count": 31,
+    "last_accessed_at": "2026-10-25T16:43:59.895180",
+    "access_count": 75,
     "metadata": {
       "source": "manual_api"
     }
@@ -1557,8 +1557,8 @@
       -0.5115155577659607
     ],
     "created_at": "2026-10-24T17:26:26.225018",
-    "last_accessed_at": "2026-10-24T17:29:30.227541",
-    "access_count": 2,
+    "last_accessed_at": "2026-10-25T16:43:59.895171",
+    "access_count": 46,
     "metadata": {
       "source": "heuristic",
       "conversation_id": "test_persistent_conv"
@@ -1571,8 +1571,8 @@
     "importance": 5,
     "embedding": null,
     "created_at": "2026-10-24T17:29:20.520447",
-    "last_accessed_at": "2026-10-24T17:29:30.227554",
-    "access_count": 3,
+    "last_accessed_at": "2026-10-25T16:43:43.523669",
+    "access_count": 12,
     "metadata": {}
   }
 ]
