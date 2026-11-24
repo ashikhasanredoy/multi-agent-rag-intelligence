@@ -864,6 +864,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="message-bubble">
           ${formattedContent}
           ${sourcesHtml}
+          <button class="bubble-hover-action-btn delete-msg-btn" title="Delete question" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          </button>
         </div>
         ${actionButtons}
       </div>
@@ -881,13 +884,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    const delBtn = row.querySelector('.delete-msg-btn');
-    if (delBtn) {
-      delBtn.addEventListener('click', () => {
+    row.querySelectorAll('.delete-msg-btn').forEach(delBtn => {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (state.isGenerating) return;
         deleteMessage(index);
       });
-    }
+    });
 
     elements.messagesList.appendChild(row);
     if (window.lucide) window.lucide.createIcons();
