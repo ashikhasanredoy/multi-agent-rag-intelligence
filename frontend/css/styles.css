@@ -481,55 +481,11 @@ code, pre {
 }
 
 .message-bubble {
-  position: relative;
   padding: 12px 16px;
   border-radius: var(--radius-lg);
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
-}
-
-/* Floating hover delete button on message bubble */
-.bubble-hover-action-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%) scale(0.85);
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #21262d;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #8b949e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.18s ease;
-  z-index: 5;
-}
-
-.message-row.user .bubble-hover-action-btn {
-  left: -34px;
-}
-
-.message-row.assistant .bubble-hover-action-btn {
-  right: -34px;
-}
-
-.message-row:hover .bubble-hover-action-btn,
-.message-bubble:hover .bubble-hover-action-btn {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(-50%) scale(1);
-}
-
-.bubble-hover-action-btn:hover {
-  color: #fff;
-  background: #da3633;
-  border-color: #da3633;
-  box-shadow: 0 2px 8px rgba(218, 54, 51, 0.4);
 }
 
 .message-row.user .message-bubble {

@@ -721,6 +721,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const conv = getCurrentConversation();
     if (!conv || index < 0 || index >= conv.messages.length) return;
 
+    // Save exact scroll position before deletion
+    const container = elements.messagesContainer;
+    const prevScrollTop = container ? container.scrollTop : 0;
+
     const targetMsg = conv.messages[index];
     if (targetMsg.role === 'user') {
       // If user deletes their question, remove the question and its corresponding assistant response if present
@@ -741,10 +745,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveConversations();
     renderConversationsList();
-    renderMessages();
+    renderMessages(false); // Pass false so screen stays in the exact same position!
+
+    // Re-apply preserved scroll position
+    if (container) {
+      container.scrollTop = prevScrollTop;
+    }
   }
 
-  function renderMessages() {
+  function renderMessages(shouldScrollToBottom = true) {
     const conv = getCurrentConversation();
     if (!conv || conv.messages.length === 0) {
       elements.welcomeHero.classList.remove('hidden');
@@ -759,7 +768,9 @@ document.addEventListener('DOMContentLoaded', () => {
       appendMessageToDOM(msg, index);
     });
 
-    scrollToBottom();
+    if (shouldScrollToBottom) {
+      scrollToBottom();
+    }
   }
 
   function appendMessageToDOM(msg, index) {
@@ -864,9 +875,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="message-bubble">
           ${formattedContent}
           ${sourcesHtml}
-          <button class="bubble-hover-action-btn delete-msg-btn" title="Delete question" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-          </button>
         </div>
         ${actionButtons}
       </div>
@@ -884,13 +892,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    row.querySelectorAll('.delete-msg-btn').forEach(delBtn => {
+    const delBtn = row.querySelector('.delete-msg-btn');
+    if (delBtn) {
       delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (state.isGenerating) return;
         deleteMessage(index);
       });
-    });
+    }
 
     elements.messagesList.appendChild(row);
     if (window.lucide) window.lucide.createIcons();
