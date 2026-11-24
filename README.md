@@ -471,6 +471,10 @@ pip install -r requirements.txt
 ### 3. Start the Server
 
 ```bash
+# Recommended: Single-command launcher (auto-opens browser and prints all links)
+python run.py
+
+# Or run directly via Uvicorn:
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
