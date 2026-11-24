@@ -77,10 +77,8 @@ class WorkingMemoryBuffer:
         ]
         if not cleaned_turns:
             return
-        existing = self._fallback.get(conversation_id, [])
-        if len(cleaned_turns) >= len(existing):
-            self._fallback[conversation_id] = cleaned_turns[-30:]
-            self._save_to_disk()
+        self._fallback[conversation_id] = cleaned_turns[-30:]
+        self._save_to_disk()
 
     def get_history(
         self, conversation_id: str, limit_turns: Optional[int] = None

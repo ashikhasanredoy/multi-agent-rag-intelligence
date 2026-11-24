@@ -716,6 +716,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- MESSAGES RENDERING ---
+  function deleteMessage(index) {
+    if (state.isGenerating) return;
+    const conv = getCurrentConversation();
+    if (!conv || index < 0 || index >= conv.messages.length) return;
+
+    const targetMsg = conv.messages[index];
+    if (targetMsg.role === 'user') {
+      // If user deletes their question, remove the question and its corresponding assistant response if present
+      if (index + 1 < conv.messages.length && conv.messages[index + 1].role === 'assistant') {
+        conv.messages.splice(index, 2);
+      } else {
+        conv.messages.splice(index, 1);
+      }
+    } else {
+      // If deleting assistant message directly
+      conv.messages.splice(index, 1);
+    }
+
+    if (conv.messages.length === 0) {
+      conv.title = 'New Chat';
+      elements.currentChatTitle.textContent = 'New Chat';
+    }
+
+    saveConversations();
+    renderConversationsList();
+    renderMessages();
+  }
+
   function renderMessages() {
     const conv = getCurrentConversation();
     if (!conv || conv.messages.length === 0) {
@@ -727,14 +755,14 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.welcomeHero.classList.add('hidden');
     elements.messagesList.innerHTML = '';
 
-    conv.messages.forEach(msg => {
-      appendMessageToDOM(msg);
+    conv.messages.forEach((msg, index) => {
+      appendMessageToDOM(msg, index);
     });
 
     scrollToBottom();
   }
 
-  function appendMessageToDOM(msg) {
+  function appendMessageToDOM(msg, index) {
     const row = document.createElement('div');
     row.className = `message-row ${msg.role}`;
 
@@ -806,12 +834,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const copyAction = !isUser ? `
-      <div class="message-footer-actions">
-        <button class="msg-action-btn copy-msg-btn"><i data-lucide="copy" style="width: 12px; height: 12px;"></i> Copy</button>
+    const actionButtons = isUser ? `
+      <div class="message-footer-actions user-actions">
+        <button class="msg-action-btn copy-msg-btn" title="Copy question">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          Copy
+        </button>
+        <button class="msg-action-btn delete-msg-btn" title="Delete question">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          Delete
+        </button>
+      </div>
+    ` : `
+      <div class="message-footer-actions assistant-actions">
+        <button class="msg-action-btn copy-msg-btn" title="Copy response">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          Copy
+        </button>
+        <button class="msg-action-btn delete-msg-btn" title="Delete message">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          Delete
+        </button>
         ${msg.latency ? `<span>${msg.latency}s</span>` : ''}
       </div>
-    ` : '';
+    `;
 
     row.innerHTML = `
       <div class="message-body">
@@ -819,7 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${formattedContent}
           ${sourcesHtml}
         </div>
-        ${copyAction}
+        ${actionButtons}
       </div>
     `;
 
@@ -827,11 +873,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(msg.content);
-        copyBtn.textContent = 'Copied';
+        const origContent = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Copied';
         setTimeout(() => {
-          copyBtn.innerHTML = '<i data-lucide="copy" style="width: 12px; height: 12px;"></i> Copy';
-          if (window.lucide) window.lucide.createIcons();
+          copyBtn.innerHTML = origContent;
         }, 1500);
+      });
+    }
+
+    const delBtn = row.querySelector('.delete-msg-btn');
+    if (delBtn) {
+      delBtn.addEventListener('click', () => {
+        if (state.isGenerating) return;
+        deleteMessage(index);
       });
     }
 

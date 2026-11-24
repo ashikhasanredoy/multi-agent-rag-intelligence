@@ -595,6 +595,10 @@ code, pre {
   color: var(--text-muted);
 }
 
+.message-row.user .message-footer-actions {
+  justify-content: flex-end;
+}
+
 .msg-action-btn {
   background: transparent;
   border: none;
@@ -604,10 +608,19 @@ code, pre {
   align-items: center;
   gap: 4px;
   font-size: 11.5px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
 }
 
 .msg-action-btn:hover {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.msg-action-btn.delete-msg-btn:hover {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.12);
 }
 
 /* Minimal Thinking Indicator */
